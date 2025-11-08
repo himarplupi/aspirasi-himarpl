@@ -5,7 +5,6 @@ import backgroundRectangel from "../assets/images/rectangle498.png";
 import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/NavbarAdmin";
 import AspirasiModal from "../components/AspirasiModal";
-import dummyIlustrasi from "../assets/images/ilustrasi_aspirasi2.png";
 import AspirasiTable from "../components/AspirasiTable";
 import ImageUpdateModal from "../components/ImageUpdateModal";
 import ConfirmationDialog from "../components/ConfirmationDialog";

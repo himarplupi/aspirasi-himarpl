@@ -4,7 +4,7 @@ import logohima from "../assets/images/logohima.png";
 import backgroundRectangel from "../assets/images/rectangle498.png";
 import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/NavbarAdmin";
-import dummyIlustrasi from "../assets/images/ilustrasi_aspirasi2.png";
+import dummyIlustrasi from "../assets/images/ilustrasi_aspirasi2.webp";
 import DeleteConfirmationDialog from "../components/DeleteConfirmationDialog";
 
 const API_URL = import.meta.env.VITE_API_URL ;
