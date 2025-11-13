@@ -6,7 +6,6 @@ import AspirasiSection from "../components/sections/AspirasiSection";
 import ParallaxSection from "../components/sections/ParallaxSection";
 import TentangKamiSection from "../components/sections/TentangKamiSection";
 import Footer from "../components/layout/Footer";
-import { dummyData } from "../data/data";
 
 const API_URL = import.meta.env.VITE_API_URL;
 const STORAGE = import.meta.env.VITE_SUPABASE_STORAGE;

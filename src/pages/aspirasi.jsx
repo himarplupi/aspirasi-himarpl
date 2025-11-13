@@ -5,7 +5,7 @@ import backgroundRectangel from "../assets/images/rectangle498.png";
 import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/NavbarAdmin";
 import dummyIlustrasi from "../assets/images/ilustrasi_aspirasi2.webp";
-import DeleteConfirmationDialog from "../components/DeleteConfirmationDialog";
+import DeleteConfirmationDialog from "../components/sections/DeleteConfirmationDialog";
 
 const API_URL = import.meta.env.VITE_API_URL ;
 
@@ -27,41 +27,50 @@ const Aspirasi = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
   const navigate = useNavigate();
 
   const itemsPerPage = 5;
-  const totalPages = Math.ceil(aspirasi.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentItems = aspirasi.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
+  // currentItems = aspirasi (karena data sudah dipotong di backend)
+  const currentItems = aspirasi;
 
   useEffect(() => {
-    fetchAspirations();
-  }, []);
+    fetchAspirations(currentPage, searchTerm);
+  }, [currentPage, searchTerm]);
 
   const fetchAspirations = async () => {
-    try {
+  setLoading(true);
+  try {
       const token = localStorage.getItem("token");
-
       if (!token) {
         navigate("/login");
         return;
       }
 
-      const response = await fetch(
-        `${API_URL}/api/aspirasi/aspirasimhs`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      let url = `${API_URL}/api/aspirasi/aspirasimhs`;
+      let params = "";
+      if (searchTerm && searchTerm.trim() !== "") {
+        // Search mode
+        params = `?param=${encodeURIComponent(searchTerm)}`;
+      } else {
+        // Pagination mode
+        const start = (currentPage - 1) * itemsPerPage + 1;
+        const end = currentPage * itemsPerPage;
+        params = `?param=${start},${end}`;
+      }
+      url += params;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
       if (response.status === 401) {
-        // Token expired or invalid
         localStorage.removeItem("token");
         navigate("/login");
         return;
@@ -71,24 +80,26 @@ const Aspirasi = () => {
 
       if (response.ok && data.success) {
         // Transform API data to match the original structure
-        const transformedData = data.data.map((item) => ({
-          id: item.id_aspirasi,
-          ilustrasi: dummyIlustrasi,
-          aspirasi: item.aspirasi,
-          kategori: item.kategori,
-          penulis: item.penulis || "Anonim",
-          created_at: item.c_date
-            ? new Date(item.c_date).toLocaleString("id-ID", {
-                dateStyle: "full",
-                timeStyle: "short",
-              })
-            : new Date().toLocaleString("id-ID", {
-                dateStyle: "full",
-                timeStyle: "short",
-              }),
-        }));
-
+        const transformedData = Array.isArray(data.data)
+          ? data.data.map((item) => ({
+              id: item.id_aspirasi,
+              ilustrasi: dummyIlustrasi,
+              aspirasi: item.aspirasi,
+              kategori: item.kategori,
+              penulis: item.penulis || "Anonim",
+              created_at: item.c_date
+                ? new Date(item.c_date).toLocaleString("id-ID", {
+                    dateStyle: "full",
+                    timeStyle: "short",
+                  })
+                : new Date().toLocaleString("id-ID", {
+                    dateStyle: "full",
+                    timeStyle: "short",
+                  }),
+            }))
+          : [];
         setAspirasi(transformedData);
+        setTotalCount(data.count || transformedData.length);
       } else {
         setError(data.error || "Gagal mengambil data aspirasi");
       }
@@ -101,7 +112,8 @@ const Aspirasi = () => {
   };
 
   const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
+  setCurrentPage(pageNumber);
+  // fetchAspirations(pageNumber, searchTerm); // Sudah otomatis di useEffect
   };
 
   const handleLogout = () => {
@@ -165,8 +177,8 @@ const Aspirasi = () => {
   };
 
   const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-    setCurrentPage(1);
+  setSearchTerm(e.target.value);
+  setCurrentPage(1); // Akan trigger useEffect dan fetch data baru
   };
 
   const handleCheckboxChange = (id) => {
@@ -257,6 +269,7 @@ const Aspirasi = () => {
   const filteredAspirasi = aspirasi.filter((item) =>
     item.aspirasi.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  // filteredAspirasi tidak dipakai lagi untuk pagination, hanya untuk checkbox select all
 
   // Loading state
   if (loading) {
@@ -388,7 +401,13 @@ const Aspirasi = () => {
           </div>
           {/* Table */}
           <div className="backdrop-blur-sm bg-white/10 border border-white/20 rounded-2xl shadow-2xl overflow-hidden">
-            {filteredAspirasi.length === 0 ? (
+            {/* Loading state for table only (pagination/data fetch) */}
+            {loading ? (
+              <div className="flex flex-col items-center justify-center p-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#FFE867] border-t-transparent mb-4"></div>
+                <p className="text-white text-lg">Memuat data...</p>
+              </div>
+            ) : filteredAspirasi.length === 0 ? (
               <div className="text-center p-8">
                 <div className="text-6xl mb-4">📝</div>
                 <h3 className="text-xl font-semibold text-white mb-2">
@@ -434,7 +453,6 @@ const Aspirasi = () => {
                   </thead>
                   <tbody>
                     {filteredAspirasi
-                      .slice(startIndex, endIndex)
                       .map((item, index) => (
                         <tr
                           key={item.id}

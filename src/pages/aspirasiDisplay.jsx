@@ -4,11 +4,11 @@ import logohima from "../assets/images/logohima.png";
 import backgroundRectangel from "../assets/images/rectangle498.png";
 import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/NavbarAdmin";
-import AspirasiModal from "../components/AspirasiModal";
-import AspirasiTable from "../components/AspirasiTable";
-import ImageUpdateModal from "../components/ImageUpdateModal";
-import ConfirmationDialog from "../components/ConfirmationDialog";
-import DeleteConfirmationDialog from "../components/DeleteConfirmationDialog";
+import AspirasiModal from "../components/sections/AspirasiModal";
+import AspirasiTable from "../components/sections/AspirasiTable";
+import ImageUpdateModal from "../components/sections/ImageUpdateModal";
+import ConfirmationDialog from "../components/sections/ConfirmationDialog";
+import DeleteConfirmationDialog from "../components/sections/DeleteConfirmationDialog";
 const API_URL = import.meta.env.VITE_API_URL;
 const STORAGE = import.meta.env.VITE_SUPABASE_STORAGE;
 const AspirasiCrud = () => {

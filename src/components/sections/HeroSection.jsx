@@ -1,17 +1,22 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import ReCAPTCHA from "react-google-recaptcha";
 import aspirasiIlustrasi from "../../assets/images/aspirasi_ilustrasi.webp";
 
-const API_URL = import.meta.env.VITE_API_URL ;
+const API_URL = import.meta.env.VITE_API_URL;
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
 const HeroSection = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     aspirasi: "",
     penulis: "",
     kategori: "",
   });
   const [submissionResult, setSubmissionResult] = useState(null);
+  const [captchaValue, setCaptchaValue] = useState(null);
+  const recaptchaRef = useRef(null);
 
   useEffect(() => {
     setIsLoaded(true);
@@ -25,27 +30,49 @@ const HeroSection = () => {
     }));
   };
 
+  const handleModalOpen = () => {
+    setShowModal(true);
+    setSubmissionResult(null);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmissionResult(null); // Reset the result message
+    setSubmissionResult(null);
+
+    // Validasi captcha
+    if (!captchaValue) {
+      setSubmissionResult({
+        success: false,
+        message: "Mohon selesaikan verifikasi reCAPTCHA terlebih dahulu.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
-      const response = await fetch(
-        `${API_URL}/api/aspirasi/aspirasimhs`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(formData),
-        }
-      );
+      // Debug: log token sebelum dikirim
+      console.log("Sending reCAPTCHA token:", captchaValue);
+      console.log("Form data:", formData);
+
+      const response = await fetch(`${API_URL}/api/aspirasi/aspirasimhs`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...formData,
+          recaptchaToken: captchaValue,
+        }),
+      });
 
       if (response.status === 429) {
         setSubmissionResult({
           success: false,
           message: "Terlalu banyak permintaan. Silakan coba lagi nanti.",
         });
+        recaptchaRef.current?.reset();
+        setCaptchaValue(null);
         return;
       }
 
@@ -53,8 +80,11 @@ const HeroSection = () => {
         const errorData = await response.json();
         setSubmissionResult({
           success: false,
-          message: errorData.message || "Gagal mengirim aspirasi. Coba lagi.",
+          message:
+            errorData.message || errorData.error || "Gagal mengirim aspirasi. Coba lagi.",
         });
+        recaptchaRef.current?.reset();
+        setCaptchaValue(null);
         return;
       }
 
@@ -64,23 +94,40 @@ const HeroSection = () => {
         message: "Aspirasi berhasil dikirim!",
       });
       setFormData({ aspirasi: "", penulis: "", kategori: "" });
+      setCaptchaValue(null);
+      recaptchaRef.current?.reset();
     } catch (error) {
       console.error("Error:", error);
       setSubmissionResult({
         success: false,
         message: "Terjadi kesalahan. Coba lagi nanti.",
       });
+      recaptchaRef.current?.reset();
+      setCaptchaValue(null);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const resetForm = () => {
     setFormData({ aspirasi: "", penulis: "", kategori: "" });
     setShowModal(false);
+    setCaptchaValue(null);
+    recaptchaRef.current?.reset();
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
-    setSubmissionResult(null); // Reset the result message
+    setSubmissionResult(null);
+    setCaptchaValue(null);
+    recaptchaRef.current?.reset();
+  };
+
+  const onCaptchaChange = (value) => {
+    setCaptchaValue(value);
+    if (submissionResult && !submissionResult.success) {
+      setSubmissionResult(null);
+    }
   };
 
   return (
@@ -113,7 +160,7 @@ const HeroSection = () => {
         </h1>
         <button
           type="button"
-          onClick={() => setShowModal(true)}
+          onClick={handleModalOpen}
           className="mt-2 px-6 py-3 rounded-md bg-gray-200 text-black font-medium hover:bg-[#10316B] hover:text-[#FFE867] transition-all duration-300 transform hover:scale-105"
         >
           Suarakan Aspirasimu
@@ -122,7 +169,7 @@ const HeroSection = () => {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-          <div className="w-full max-w-md backdrop-blur-sm bg-white/10 border border-white/20 rounded-2xl shadow-2xl p-8">
+          <div className="w-full max-w-md backdrop-blur-sm bg-white/10 border border-white/20 rounded-2xl shadow-2xl p-8 max-h-[90vh] overflow-y-auto">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-white">
                 Suarakan Aspirasimu
@@ -139,8 +186,9 @@ const HeroSection = () => {
                   value={formData.aspirasi}
                   onChange={handleChange}
                   required
+                  disabled={isSubmitting}
                   rows="3"
-                  className="w-full px-4 py-2 rounded-lg bg-white/20 text-white placeholder-white/70 border border-white/30 focus:outline-none focus:ring-2 focus:ring-[#FFE867]"
+                  className="w-full px-4 py-2 rounded-lg bg-white/20 text-white placeholder-white/70 border border-white/30 focus:outline-none focus:ring-2 focus:ring-[#FFE867] disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="Masukkan aspirasi..."
                 />
               </div>
@@ -157,7 +205,8 @@ const HeroSection = () => {
                   name="penulis"
                   value={formData.penulis}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 rounded-lg bg-white/20 text-white placeholder-white/70 border border-white/30 focus:outline-none focus:ring-2 focus:ring-[#FFE867]"
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-2 rounded-lg bg-white/20 text-white placeholder-white/70 border border-white/30 focus:outline-none focus:ring-2 focus:ring-[#FFE867] disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="Nama penulis..."
                 />
               </div>
@@ -173,7 +222,8 @@ const HeroSection = () => {
                   name="kategori"
                   value={formData.kategori}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-[#FFE867]"
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-[#FFE867] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="" className="bg-[#10316B] text-white">
                     Pilih kategori...
@@ -186,6 +236,23 @@ const HeroSection = () => {
                   </option>
                 </select>
               </div>
+
+              {/* reCAPTCHA */}
+              <div className="flex justify-center">
+                <ReCAPTCHA
+                  ref={recaptchaRef}
+                  sitekey={RECAPTCHA_SITE_KEY}
+                  onChange={onCaptchaChange}
+                  theme="dark"
+                />
+              </div>
+
+              {isSubmitting && (
+                <div className="flex items-center justify-center gap-2 p-4 rounded-lg bg-blue-500/20 text-white">
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>Mengirim aspirasi...</span>
+                </div>
+              )}
 
               {submissionResult && (
                 <div
@@ -213,15 +280,17 @@ const HeroSection = () => {
                     <button
                       type="button"
                       onClick={resetForm}
-                      className="flex-1 py-2 bg-white/20 text-white font-semibold rounded-lg hover:bg-white/30 transition duration-300"
+                      disabled={isSubmitting}
+                      className="flex-1 py-2 bg-white/20 text-white font-semibold rounded-lg hover:bg-white/30 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Batal
                     </button>
                     <button
                       type="submit"
-                      className="flex-1 py-2 bg-[#FFE867] text-[#10316B] font-semibold rounded-lg hover:bg-[#e6d258] transition duration-300 shadow-md"
+                      disabled={isSubmitting || !captchaValue}
+                      className="flex-1 py-2 bg-[#FFE867] text-[#10316B] font-semibold rounded-lg hover:bg-[#e6d258] transition duration-300 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Kirim
+                      {isSubmitting ? "Mengirim..." : "Kirim"}
                     </button>
                   </>
                 )}
