@@ -4,7 +4,10 @@ import logohima from "../assets/images/logohima.png";
 import backgroundRectangel from "../assets/images/rectangle498.png";
 import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/NavbarAdmin";
-import dummyIlustrasi from "../assets/images/ilustrasi_aspirasi2.png";
+import dummyIlustrasi from "../assets/images/ilustrasi_aspirasi2.webp";
+import DeleteConfirmationDialog from "../components/sections/DeleteConfirmationDialog";
+
+const API_URL = import.meta.env.VITE_API_URL ;
 
 const Aspirasi = () => {
   const [aspirasi, setAspirasi] = useState([]);
@@ -19,41 +22,55 @@ const Aspirasi = () => {
     kategori: "prodi",
     status: "displayed",
   });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
   const navigate = useNavigate();
 
   const itemsPerPage = 5;
-  const totalPages = Math.ceil(aspirasi.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentItems = aspirasi.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
+  // currentItems = aspirasi (karena data sudah dipotong di backend)
+  const currentItems = aspirasi;
 
   useEffect(() => {
-    fetchAspirations();
-  }, []);
+    fetchAspirations(currentPage, searchTerm);
+  }, [currentPage, searchTerm]);
 
   const fetchAspirations = async () => {
-    try {
+  setLoading(true);
+  try {
       const token = localStorage.getItem("token");
-
       if (!token) {
         navigate("/login");
         return;
       }
 
-      const response = await fetch(
-        "http://localhost:3000/api/aspirasi/aspirasimhs",
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      let url = `${API_URL}/api/aspirasi/aspirasimhs`;
+      let params = "";
+      if (searchTerm && searchTerm.trim() !== "") {
+        // Search mode
+        params = `?param=${encodeURIComponent(searchTerm)}`;
+      } else {
+        // Pagination mode
+        const start = (currentPage - 1) * itemsPerPage + 1;
+        const end = currentPage * itemsPerPage;
+        params = `?param=${start},${end}`;
+      }
+      url += params;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
       if (response.status === 401) {
-        // Token expired or invalid
         localStorage.removeItem("token");
         navigate("/login");
         return;
@@ -63,23 +80,26 @@ const Aspirasi = () => {
 
       if (response.ok && data.success) {
         // Transform API data to match the original structure
-        const transformedData = data.data.map((item) => ({
-          id: item.id_aspirasi,
-          ilustrasi: dummyIlustrasi,
-          aspirasi: item.aspirasi,
-          penulis: item.penulis || "Anonim",
-          created_at: item.c_date
-            ? new Date(item.c_date).toLocaleString("id-ID", {
-                dateStyle: "full",
-                timeStyle: "short",
-              })
-            : new Date().toLocaleString("id-ID", {
-                dateStyle: "full",
-                timeStyle: "short",
-              }),
-        }));
-
+        const transformedData = Array.isArray(data.data)
+          ? data.data.map((item) => ({
+              id: item.id_aspirasi,
+              ilustrasi: dummyIlustrasi,
+              aspirasi: item.aspirasi,
+              kategori: item.kategori,
+              penulis: item.penulis || "Anonim",
+              created_at: item.c_date
+                ? new Date(item.c_date).toLocaleString("id-ID", {
+                    dateStyle: "full",
+                    timeStyle: "short",
+                  })
+                : new Date().toLocaleString("id-ID", {
+                    dateStyle: "full",
+                    timeStyle: "short",
+                  }),
+            }))
+          : [];
         setAspirasi(transformedData);
+        setTotalCount(data.count || transformedData.length);
       } else {
         setError(data.error || "Gagal mengambil data aspirasi");
       }
@@ -92,13 +112,164 @@ const Aspirasi = () => {
   };
 
   const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
+  setCurrentPage(pageNumber);
+  // fetchAspirations(pageNumber, searchTerm); // Sudah otomatis di useEffect
   };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/login");
   };
+
+  const handleDelete = (id) => {
+    setDeletingId(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    setShowDeleteModal(false);
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      const response = await fetch(
+        `${API_URL}/api/aspirasi/aspirasimhs?id=${deletingId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.status === 401) {
+        localStorage.removeItem("token");
+        navigate("/login");
+        return;
+      }
+
+      if (response.ok) {
+        setAspirasi((prevAspirasi) =>
+          prevAspirasi.filter((item) => item.id !== deletingId)
+        );
+        alert("Aspirasi berhasil dihapus!");
+      } else {
+        const data = await response.json();
+        setError(data.error || "Gagal menghapus aspirasi");
+      }
+    } catch (err) {
+      console.error("Error deleting aspiration:", err);
+      setError("Terjadi kesalahan koneksi saat menghapus");
+    } finally {
+      setLoading(false);
+      setDeletingId(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setDeletingId(null);
+  };
+
+  const handleSearchChange = (e) => {
+  setSearchTerm(e.target.value);
+  setCurrentPage(1); // Akan trigger useEffect dan fetch data baru
+  };
+
+  const handleCheckboxChange = (id) => {
+    setSelectedIds((prevSelected) =>
+      prevSelected.includes(id)
+        ? prevSelected.filter((selectedId) => selectedId !== id)
+        : [...prevSelected, id]
+    );
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds((prevSelected) => [
+        ...prevSelected,
+        ...currentItems
+          .filter((item) => !prevSelected.includes(item.id))
+          .map((item) => item.id),
+      ]);
+    } else {
+      setSelectedIds((prevSelected) =>
+        prevSelected.filter((id) => !currentItems.some((item) => item.id === id))
+      );
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) {
+      alert("Pilih aspirasi yang ingin dihapus.");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        "Apakah Anda yakin ingin menghapus aspirasi yang dipilih?"
+      )
+    ) {
+      return;
+    }
+
+    setIsBulkDeleting(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      for (const id of selectedIds) {
+        const response = await fetch(
+          `${API_URL}/api/aspirasi/aspirasimhs?id=${id}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (response.status === 401) {
+          localStorage.removeItem("token");
+          navigate("/login");
+          return;
+        }
+
+        if (!response.ok) {
+          const data = await response.json();
+          console.error(`Gagal menghapus aspirasi dengan ID ${id}:`, data.error);
+          alert(`Gagal menghapus aspirasi dengan ID ${id}: ${data.error}`);
+          break;
+        }
+
+        setAspirasi((prevAspirasi) =>
+          prevAspirasi.filter((item) => item.id !== id)
+        );
+      }
+
+      setSelectedIds([]);
+      alert("Aspirasi yang dipilih berhasil dihapus!");
+    } catch (err) {
+      console.error("Error deleting selected aspirations:", err);
+      alert("Terjadi kesalahan koneksi saat menghapus.");
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const filteredAspirasi = aspirasi.filter((item) =>
+    item.aspirasi.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  // filteredAspirasi tidak dipakai lagi untuk pagination, hanya untuk checkbox select all
 
   // Loading state
   if (loading) {
@@ -117,7 +288,7 @@ const Aspirasi = () => {
         <div className="absolute w-80 h-80 bg-[#ffe867]/30 rounded-full bottom-10 right-10 blur-2xl opacity-20" />
 
         {/* Navbar */}
-       <Navbar currentPage="data"/>
+        <Navbar currentPage="data" />
 
         <main className="flex-grow flex items-center justify-center z-10">
           <div className="text-center">
@@ -150,7 +321,7 @@ const Aspirasi = () => {
         <div className="absolute w-80 h-80 bg-[#ffe867]/30 rounded-full bottom-10 right-10 blur-2xl opacity-20" />
 
         {/* Navbar */}
-        <Navbar currentPage="data"/>
+        <Navbar currentPage="data" />
 
         <main className="flex-grow flex items-center justify-center z-10 px-4">
           <div className="text-center max-w-md backdrop-blur-sm bg-white/10 border border-white/20 rounded-2xl shadow-2xl p-8">
@@ -190,7 +361,7 @@ const Aspirasi = () => {
       <div className="absolute w-80 h-80 bg-[#ffe867]/30 rounded-full bottom-10 right-10 blur-2xl opacity-20" />
 
       {/* Navbar */}
-      <Navbar currentPage="data"/>
+      <Navbar currentPage="data" />
 
       {/* Main content area */}
       <main className="flex-grow px-4 py-8 z-10">
@@ -210,16 +381,40 @@ const Aspirasi = () => {
             </p>
           </div>
 
+          {/* Search Bar and Delete Selected Button */}
+          <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-center">
+            <div className="flex-1 max-w-md">
+              <input
+                type="text"
+                placeholder="Cari aspirasi..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="w-full px-4 py-2 rounded-lg bg-white/20 text-white placeholder-white/70 border border-white/30 focus:outline-none focus:ring-2 focus:ring-[#FFE867]"
+              />
+            </div>
+            <button
+              onClick={handleDeleteSelected}
+              className="bg-red-500/20 text-red-300 px-3 py-1 rounded-lg text-sm font-semibold border border-red-500/30 hover:bg-red-600/30 hover:border-red-600 transition duration-300"
+            >
+              Delete Selected
+            </button>
+          </div>
           {/* Table */}
           <div className="backdrop-blur-sm bg-white/10 border border-white/20 rounded-2xl shadow-2xl overflow-hidden">
-            {aspirasi.length === 0 ? (
+            {/* Loading state for table only (pagination/data fetch) */}
+            {loading ? (
+              <div className="flex flex-col items-center justify-center p-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#FFE867] border-t-transparent mb-4"></div>
+                <p className="text-white text-lg">Memuat data...</p>
+              </div>
+            ) : filteredAspirasi.length === 0 ? (
               <div className="text-center p-8">
                 <div className="text-6xl mb-4">📝</div>
                 <h3 className="text-xl font-semibold text-white mb-2">
-                  Belum Ada Aspirasi
+                  Tidak Ada Aspirasi
                 </h3>
                 <p className="text-gray-200">
-                  Belum ada aspirasi yang terdaftar dalam sistem
+                  Tidak ada aspirasi yang sesuai dengan pencarian Anda.
                 </p>
               </div>
             ) : (
@@ -227,6 +422,18 @@ const Aspirasi = () => {
                 <table className="w-full">
                   <thead className="bg-black/20">
                     <tr>
+                      <th className="px-4 py-4 text-left text-sm font-bold text-white">
+                        <input
+                          type="checkbox"
+                          onChange={handleSelectAll}
+                          checked={
+                            currentItems.length > 0 &&
+                            currentItems.every((item) =>
+                              selectedIds.includes(item.id)
+                            )
+                          }
+                        />
+                      </th>
                       <th className="px-6 py-4 text-left text-sm font-bold text-white">
                         Aspirasi
                       </th>
@@ -236,31 +443,58 @@ const Aspirasi = () => {
                       <th className="px-6 py-4 text-left text-sm font-bold text-white">
                         Tanggal & Waktu
                       </th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-white">
+                        Kategori
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-white">
+                        Aksi
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {currentItems.map((item, index) => (
-                      <tr
-                        key={item.id}
-                        className={`border-b border-white/10 ${
-                          index % 2 === 0 ? "bg-white/5" : "bg-white/10"
-                        }`}
-                      >
-                        <td className="px-6 py-4">
-                          <div className="text-white font-medium max-w-xs truncate">
-                            {item.aspirasi}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-white">{item.penulis}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-white text-sm">
-                            {item.created_at}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {filteredAspirasi
+                      .map((item, index) => (
+                        <tr
+                          key={item.id}
+                          className={`border-b border-white/10 ${
+                            index % 2 === 0 ? "bg-white/5" : "bg-white/10"
+                          }`}
+                        >
+                          <td className="px-4 py-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(item.id)}
+                              onChange={() => handleCheckboxChange(item.id)}
+                            />
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-white font-medium break-words">
+                              {item.aspirasi}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-white">{item.penulis}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-white text-sm">
+                              {item.created_at}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-white text-sm">
+                              {item.kategori}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <button
+                              onClick={() => handleDelete(item.id)}
+                              className="bg-red-500/20 text-red-300 px-3 py-1 rounded-lg text-sm font-semibold hover:bg-red-500/30 transition duration-300"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
@@ -303,6 +537,25 @@ const Aspirasi = () => {
           </div>
         </div>
       </main>
+
+      <DeleteConfirmationDialog
+        show={showDeleteModal}
+        message="Apakah Anda yakin ingin menghapus aspirasi ini? \nPERINGATAN: Data yang dihapus tidak dapat dikembalikan!"
+        onCancel={cancelDelete}
+        onConfirm={confirmDelete}
+      />
+
+      {/* Loading Modal */}
+      {isBulkDeleting && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
+            <p className="text-gray-700 font-semibold">
+              Menghapus aspirasi yang dipilih...
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="z-10">

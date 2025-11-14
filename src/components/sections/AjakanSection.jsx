@@ -1,6 +1,6 @@
 import React from "react";
 import { AnimatedSection } from "../animations/AnimationComponents";
-import aspirasiIlustrasi2 from "../../assets/images/ilustrasi_aspirasi2.png";
+import aspirasiIlustrasi2 from "../../assets/images/ilustrasi_aspirasi2.webp";
 import ornaments1 from "../../assets/ornaments/Group 241.svg";
 import ornaments2 from "../../assets/ornaments/Group 250.svg";
 import ornaments3 from "../../assets/ornaments/Group 252.svg";

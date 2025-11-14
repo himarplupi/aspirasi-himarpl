@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import logohima from "../assets/images/logohima.png";
 import Footer from "../components/layout/Footer";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
@@ -28,35 +30,48 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (validateForm()) {
       setIsLoading(true);
       try {
-        const response = await fetch('http://localhost:3000/api/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(formData),
-        });
+        const response = await fetch(
+          `${API_URL}/api/auth/login`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(formData),
+          }
+        );
 
         const data = await response.json();
 
-        if (response.ok && data.status === 'success') {
-          // Simpan token dan data user ke localStorage
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('user', JSON.stringify(data.user));
-          
-          // Redirect ke halaman aspirasi
-          navigate('/aspirasi');
+        // Deteksi khusus jika rate limit (HTTP 429)
+        if (response.status === 429) {
+          setErrors({
+            general:
+              data.message || "Terlalu banyak permintaan. Coba lagi nanti.",
+          });
+          return; // Stop di sini, jangan proses lebih lanjut
+        }
+
+        // Jika sukses login
+        if (response.ok && data.status === "success") {
+          localStorage.setItem("token", data.token);
+          localStorage.setItem("user", JSON.stringify(data.user));
+          navigate("/aspirasi");
         } else {
-          setErrors({ 
-            general: data.message || 'Login gagal. Periksa email dan password Anda.' 
+          // Gagal login biasa
+          setErrors({
+            general:
+              data.message || "Login gagal. Periksa email dan password Anda.",
           });
         }
       } catch (error) {
-        console.error('Login error:', error);
-        setErrors({ 
-          general: 'Terjadi kesalahan koneksi. Silakan coba lagi.' 
+        console.error("Login error:", error);
+        setErrors({
+          general: "Terjadi kesalahan koneksi. Silakan coba lagi.",
         });
       } finally {
         setIsLoading(false);
@@ -82,12 +97,12 @@ const Login = () => {
             <h2 className="mt-4 text-2xl font-bold text-white tracking-wide">
               Selamat Datang
             </h2>
-            <p className="text-sm text-gray-200 mt-1">
+            {/* <p className="text-sm text-gray-200 mt-1">
               Belum punya akun?{" "}
               <Link to="/register" className="text-[#FFE867] hover:underline">
                 Daftar sekarang
               </Link>
-            </p>
+            </p> */}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -170,7 +185,7 @@ const Login = () => {
 
       {/* Sticky Footer */}
       <footer className="z-10">
-        <Footer withAnimation={false}/>
+        <Footer withAnimation={false} />
       </footer>
     </div>
   );
