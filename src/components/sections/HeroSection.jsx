@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import aspirasiIlustrasi from "../../assets/images/aspirasi_ilustrasi.png";
 
+const API_URL = import.meta.env.VITE_API_URL ;
+
 const HeroSection = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [showModal, setShowModal] = useState(false);
