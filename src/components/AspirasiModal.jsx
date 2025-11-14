@@ -36,7 +36,7 @@ const AspirasiModal = ({
       if (!token) return;
 
       const response = await fetch(
-        "http://192.168.100.102:3000/api/aspirasi/aspirasimhs",
+        "http://localhost:3000/api/aspirasi/aspirasimhs",
         {
           method: "GET",
           headers: {
@@ -141,7 +141,7 @@ const AspirasiModal = ({
       }
 
       const response = await fetch(
-        "http://192.168.100.102:3000/api/aspirasi/displayaspirasi",
+        "http://localhost:3000/api/aspirasi/displayaspirasi",
         {
           method: "POST",
           headers: {

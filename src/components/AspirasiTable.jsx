@@ -18,11 +18,7 @@ const AspirasiTable = ({
 }) => {
   const getImageUrl = (imageName) => {
     return imageName
-<<<<<<< HEAD
-      ? `http://localhost:3000/assets/images/ilustrasi_aspirasi/${imageName}`
-=======
-      ? `http://192.168.100.102:3000/assets/images/ilustrasi_aspirasi/${imageName}`
->>>>>>> parent of 7a99160 (setup supabase dan turso)
+      ? `https://iieyqnbtsfzpvetpcyjp.supabase.co/storage/v1/object/public/ilust_aspirasi/${imageName}`
       : null;
   };
 
