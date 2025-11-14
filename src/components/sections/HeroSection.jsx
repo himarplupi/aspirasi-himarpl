@@ -26,7 +26,7 @@ const HeroSection = () => {
 
     try {
       const response = await fetch(
-        "http://localhost:3000/api/aspirasi/aspirasimhs",
+        "http://192.168.100.102:3000/api/aspirasi/aspirasimhs",
         {
           method: "POST",
           headers: {

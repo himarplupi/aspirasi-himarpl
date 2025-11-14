@@ -42,7 +42,7 @@ const Aspirasi = () => {
       }
 
       const response = await fetch(
-        "http://localhost:3000/api/aspirasi/aspirasimhs",
+        "http://192.168.100.102:3000/api/aspirasi/aspirasimhs",
         {
           method: "GET",
           headers: {
@@ -99,6 +99,155 @@ const Aspirasi = () => {
     localStorage.removeItem("token");
     navigate("/login");
   };
+
+  const handleDelete = (id) => {
+    setDeletingId(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    setShowDeleteModal(false);
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      const response = await fetch(
+        `http://192.168.100.102:3000/api/aspirasi/aspirasimhs?id=${deletingId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.status === 401) {
+        localStorage.removeItem("token");
+        navigate("/login");
+        return;
+      }
+
+      if (response.ok) {
+        setAspirasi((prevAspirasi) =>
+          prevAspirasi.filter((item) => item.id !== deletingId)
+        );
+        alert("Aspirasi berhasil dihapus!");
+      } else {
+        const data = await response.json();
+        setError(data.error || "Gagal menghapus aspirasi");
+      }
+    } catch (err) {
+      console.error("Error deleting aspiration:", err);
+      setError("Terjadi kesalahan koneksi saat menghapus");
+    } finally {
+      setLoading(false);
+      setDeletingId(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setDeletingId(null);
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleCheckboxChange = (id) => {
+    setSelectedIds((prevSelected) =>
+      prevSelected.includes(id)
+        ? prevSelected.filter((selectedId) => selectedId !== id)
+        : [...prevSelected, id]
+    );
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds((prevSelected) => [
+        ...prevSelected,
+        ...currentItems
+          .filter((item) => !prevSelected.includes(item.id))
+          .map((item) => item.id),
+      ]);
+    } else {
+      setSelectedIds((prevSelected) =>
+        prevSelected.filter((id) => !currentItems.some((item) => item.id === id))
+      );
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) {
+      alert("Pilih aspirasi yang ingin dihapus.");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        "Apakah Anda yakin ingin menghapus aspirasi yang dipilih?"
+      )
+    ) {
+      return;
+    }
+
+    setIsBulkDeleting(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      for (const id of selectedIds) {
+        const response = await fetch(
+          `http://192.168.100.102:3000/api/aspirasi/aspirasimhs?id=${id}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (response.status === 401) {
+          localStorage.removeItem("token");
+          navigate("/login");
+          return;
+        }
+
+        if (!response.ok) {
+          const data = await response.json();
+          console.error(`Gagal menghapus aspirasi dengan ID ${id}:`, data.error);
+          alert(`Gagal menghapus aspirasi dengan ID ${id}: ${data.error}`);
+          break;
+        }
+
+        setAspirasi((prevAspirasi) =>
+          prevAspirasi.filter((item) => item.id !== id)
+        );
+      }
+
+      setSelectedIds([]);
+      alert("Aspirasi yang dipilih berhasil dihapus!");
+    } catch (err) {
+      console.error("Error deleting selected aspirations:", err);
+      alert("Terjadi kesalahan koneksi saat menghapus.");
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const filteredAspirasi = aspirasi.filter((item) =>
+    item.aspirasi.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   // Loading state
   if (loading) {
