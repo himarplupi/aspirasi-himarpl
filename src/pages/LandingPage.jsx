@@ -8,6 +8,9 @@ import TentangKamiSection from "../components/sections/TentangKamiSection";
 import Footer from "../components/layout/Footer";
 import { dummyData } from "../data/data";
 
+const API_URL = import.meta.env.VITE_API_URL;
+const STORAGE = import.meta.env.VITE_SUPABASE_STORAGE;
+
 export default function LandingPage() {
   const [aspirations, setAspirations] = useState([]);
   const [loading, setLoading] = useState(true);

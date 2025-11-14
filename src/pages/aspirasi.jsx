@@ -4,8 +4,10 @@ import logohima from "../assets/images/logohima.png";
 import backgroundRectangel from "../assets/images/rectangle498.png";
 import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/NavbarAdmin";
-import dummyIlustrasi from "../assets/images/ilustrasi_aspirasi2.png";
+import dummyIlustrasi from "../assets/images/ilustrasi_aspirasi2.webp";
 import DeleteConfirmationDialog from "../components/DeleteConfirmationDialog";
+
+const API_URL = import.meta.env.VITE_API_URL ;
 
 const Aspirasi = () => {
   const [aspirasi, setAspirasi] = useState([]);
@@ -20,6 +22,11 @@ const Aspirasi = () => {
     kategori: "prodi",
     status: "displayed",
   });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const navigate = useNavigate();
 
@@ -43,7 +50,7 @@ const Aspirasi = () => {
       }
 
       const response = await fetch(
-        "http://localhost:3000/api/aspirasi/aspirasimhs",
+        `${API_URL}/api/aspirasi/aspirasimhs`,
         {
           method: "GET",
           headers: {
@@ -68,6 +75,7 @@ const Aspirasi = () => {
           id: item.id_aspirasi,
           ilustrasi: dummyIlustrasi,
           aspirasi: item.aspirasi,
+          kategori: item.kategori,
           penulis: item.penulis || "Anonim",
           created_at: item.c_date
             ? new Date(item.c_date).toLocaleString("id-ID", {
@@ -362,7 +370,7 @@ const Aspirasi = () => {
 
           {/* Table */}
           <div className="backdrop-blur-sm bg-white/10 border border-white/20 rounded-2xl shadow-2xl overflow-hidden">
-            {aspirasi.length === 0 ? (
+            {filteredAspirasi.length === 0 ? (
               <div className="text-center p-8">
                 <div className="text-6xl mb-4">📝</div>
                 <h3 className="text-xl font-semibold text-white mb-2">
@@ -389,28 +397,50 @@ const Aspirasi = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentItems.map((item, index) => (
-                      <tr
-                        key={item.id}
-                        className={`border-b border-white/10 ${
-                          index % 2 === 0 ? "bg-white/5" : "bg-white/10"
-                        }`}
-                      >
-                        <td className="px-6 py-4">
-                          <div className="text-white font-medium max-w-xs truncate">
-                            {item.aspirasi}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-white">{item.penulis}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-white text-sm">
-                            {item.created_at}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {filteredAspirasi
+                      .slice(startIndex, endIndex)
+                      .map((item, index) => (
+                        <tr
+                          key={item.id}
+                          className={`border-b border-white/10 ${
+                            index % 2 === 0 ? "bg-white/5" : "bg-white/10"
+                          }`}
+                        >
+                          <td className="px-4 py-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(item.id)}
+                              onChange={() => handleCheckboxChange(item.id)}
+                            />
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-white font-medium break-words">
+                              {item.aspirasi}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-white">{item.penulis}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-white text-sm">
+                              {item.created_at}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-white text-sm">
+                              {item.kategori}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <button
+                              onClick={() => handleDelete(item.id)}
+                              className="bg-red-500/20 text-red-300 px-3 py-1 rounded-lg text-sm font-semibold hover:bg-red-500/30 transition duration-300"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>

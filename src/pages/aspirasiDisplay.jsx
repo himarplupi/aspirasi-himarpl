@@ -5,12 +5,12 @@ import backgroundRectangel from "../assets/images/rectangle498.png";
 import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/NavbarAdmin";
 import AspirasiModal from "../components/AspirasiModal";
-import dummyIlustrasi from "../assets/images/ilustrasi_aspirasi2.png";
 import AspirasiTable from "../components/AspirasiTable";
 import ImageUpdateModal from "../components/ImageUpdateModal";
 import ConfirmationDialog from "../components/ConfirmationDialog";
 import DeleteConfirmationDialog from "../components/DeleteConfirmationDialog";
-
+const API_URL = import.meta.env.VITE_API_URL;
+const STORAGE = import.meta.env.VITE_SUPABASE_STORAGE;
 const AspirasiCrud = () => {
   const [showModal, setShowModal] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
