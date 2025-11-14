@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import aspirasiIlustrasi2 from "../../assets/images/ilustrasi_aspirasi2.png";
+import aspirasiIlustrasi2 from "../../assets/images/ilustrasi_aspirasi2.webp";
 
 const AspirasiCard = ({ id, content, author, image }) => {
   const [expanded, setExpanded] = useState(false);

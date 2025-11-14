@@ -4,11 +4,11 @@ import logohima from "../assets/images/logohima.png";
 import backgroundRectangel from "../assets/images/rectangle498.png";
 import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/NavbarAdmin";
-import AspirasiModal from "../components/AspirasiModal";
-import AspirasiTable from "../components/AspirasiTable";
-import ImageUpdateModal from "../components/ImageUpdateModal";
-import ConfirmationDialog from "../components/ConfirmationDialog";
-import DeleteConfirmationDialog from "../components/DeleteConfirmationDialog";
+import AspirasiModal from "../components/sections/AspirasiModal";
+import AspirasiTable from "../components/sections/AspirasiTable";
+import ImageUpdateModal from "../components/sections/ImageUpdateModal";
+import ConfirmationDialog from "../components/sections/ConfirmationDialog";
+import DeleteConfirmationDialog from "../components/sections/DeleteConfirmationDialog";
 const API_URL = import.meta.env.VITE_API_URL;
 const STORAGE = import.meta.env.VITE_SUPABASE_STORAGE;
 const AspirasiCrud = () => {
@@ -94,7 +94,8 @@ const handleConfirmUpdateImage = async () => {
     formData.append('id_dispirasi', selectedItemForImageUpdate.id_dispirasi.toString());
     formData.append('action', 'update_image');
     formData.append('ilustrasi', pendingFile);
-    const response = await fetch("http://localhost:3000/api/aspirasi/displayaspirasi", {
+    
+    const response = await fetch(`${API_URL}/api/aspirasi/displayaspirasi`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -137,7 +138,7 @@ const handleConfirmUpdateImage = async () => {
         return;
       }
 
-      let url = "http://localhost:3000/api/aspirasi/displayaspirasi";
+      let url = `${API_URL}/api/aspirasi/displayaspirasi`;
 
       if (search.trim()) {
         url += `?param=${encodeURIComponent(search)}`;
@@ -199,7 +200,8 @@ const handleConfirmUpdateImage = async () => {
       formData.append(action, newValue);
 
       const response = await fetch(
-        "http://localhost:3000/api/aspirasi/displayaspirasi",
+        
+        `${API_URL}/api/aspirasi/displayaspirasi`,
         {
           method: "PUT",
           headers: {
@@ -294,7 +296,8 @@ const handleConfirmUpdateImage = async () => {
     setUpdateLoading(itemToDelete.id_dispirasi);
     setShowDeleteConfirm(false);
     try {
-      const response = await fetch(`http://localhost:3000/api/aspirasi/displayaspirasi?id=${itemToDelete.id_dispirasi}`, {
+      
+      const response = await fetch(`${API_URL}/api/aspirasi/displayaspirasi?id=${itemToDelete.id_dispirasi}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -336,7 +339,8 @@ const handleConfirmUpdateImage = async () => {
 
   const getImageUrl = (imageName) => {
     return imageName
-      ? `https://iieyqnbtsfzpvetpcyjp.supabase.co/storage/v1/object/public/ilust_aspirasi/${imageName}`
+      ? 
+      `${STORAGE}${imageName}`
       : null;
   };
 
@@ -429,37 +433,69 @@ const handleConfirmUpdateImage = async () => {
             onDeleteClick={handleDeleteClick}
           />
           {/* Image Update Modal */}
-          <ImageUpdateModal
-            show={showImageUpdateModal}
-            onCancel={handleCancelImageUpdate}
-            selectedItem={selectedItemForImageUpdate}
-            getImageUrl={getImageUrl}
-            previewImage={previewImage}
-            onFileChange={handleFileChange}
-            onUpdateClick={handleUpdateImageClick}
-            isUpdateMode={!!previewImage}
-          />
+          {showImageUpdateModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1050]">
+              <ImageUpdateModal
+                show={showImageUpdateModal}
+                onCancel={handleCancelImageUpdate}
+                selectedItem={selectedItemForImageUpdate}
+                getImageUrl={getImageUrl}
+                previewImage={previewImage}
+                onFileChange={handleFileChange}
+                onUpdateClick={handleUpdateImageClick}
+                isUpdateMode={!!previewImage}
+              />
+            </div>
+          )}
           {/* Confirmation Dialog */}
-          <ConfirmationDialog
-            show={showConfirmDialog}
-            message={confirmAction?.message}
-            onCancel={handleCancel}
-            onConfirm={handleConfirm}
-          />
+          {showConfirmDialog && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1050]">
+              <ConfirmationDialog
+                show={showConfirmDialog}
+                message={confirmAction?.message}
+                onCancel={handleCancel}
+                onConfirm={handleConfirm}
+              />
+            </div>
+          )}
           {/* Confirmation Dialog for Update Image */}
-          <ConfirmationDialog
-            show={showImageUpdateConfirm}
-            message={"Apakah Anda yakin ingin mengupdate ilustrasi ini?"}
-            onCancel={() => setShowImageUpdateConfirm(false)}
-            onConfirm={handleConfirmUpdateImage}
-          />
+          {showImageUpdateConfirm && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1050]">
+              <ConfirmationDialog
+                show={showImageUpdateConfirm}
+                message={"Apakah Anda yakin ingin mengupdate ilustrasi ini?"}
+                onCancel={() => setShowImageUpdateConfirm(false)}
+                onConfirm={handleConfirmUpdateImage}
+              />
+            </div>
+          )}
           {/* Confirmation Dialog for Delete */}
-          <DeleteConfirmationDialog
-            show={showDeleteConfirm}
-            message={itemToDelete ? `Apakah Anda yakin ingin menghapus aspirasi ini?\n\n\"${itemToDelete.aspirasi}\"` : ""}
-            onCancel={handleCancelDelete}
-            onConfirm={handleConfirmDelete}
-          />
+          {showDeleteConfirm && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1050]">
+              <DeleteConfirmationDialog
+                show={showDeleteConfirm}
+                message={
+                  itemToDelete
+                    ? `Apakah Anda yakin ingin menghapus aspirasi ini?\n\n\"${itemToDelete.aspirasi}\"`
+                    : ""
+                }
+                onCancel={handleCancelDelete}
+                onConfirm={handleConfirmDelete}
+              />
+            </div>
+          )}
+          {/* Modal */}
+          {showModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1050]">
+              <AspirasiModal
+                show={showModal}
+                onClose={handleModalCloseAndRefresh}
+                fetchDisplayAspirasi={fetchDisplayAspirasi}
+                displayCurrentPage={displayCurrentPage}
+                searchTerm={searchTerm}
+              />
+            </div>
+          )}
           <input
             type="file"
             ref={fileInputRef}
@@ -470,20 +506,8 @@ const handleConfirmUpdateImage = async () => {
         </div>
       </main>
 
-      {/* Modal */}
-      <AspirasiModal
-        show={showModal}
-        onClose={handleModalCloseAndRefresh}
-        fetchDisplayAspirasi={fetchDisplayAspirasi}
-        displayCurrentPage={displayCurrentPage}
-        searchTerm={searchTerm}
-      />
-
-      {/* Confirmation Dialog */}
-      <ConfirmationDialog />
-
       {/* Footer */}
-      <footer className="z-10">
+      <footer className="z-10 relative">
         <Footer withAnimation={false} />
       </footer>
     </div>
